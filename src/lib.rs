@@ -56,14 +56,14 @@ use arrayvec::ArrayVec;
 use unicode_segmentation::UnicodeSegmentation;
 
 #[derive(Default, Debug, Clone, Copy, PartialEq, Eq)]
-pub enum Axis {
+enum Axis {
     #[default]
     X = 0,
     Y = 1,
 }
 
 #[derive(Default, Clone, Copy, PartialEq, Eq, Hash)]
-pub struct Vec2<T>(T, T);
+struct Vec2<T>(T, T);
 
 impl<T: std::fmt::Debug> std::fmt::Debug for Vec2<T> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
