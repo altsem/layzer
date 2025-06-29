@@ -22,7 +22,7 @@
 //! ## Quick Start
 //!
 //! ```rust
-//! use layzer::{Layout, LayoutMeta, Axis};
+//! use layzer::{Layout, LayoutMeta};
 //!
 //! // Create a text element
 //! let text_layout = Layout::text("Hello, World!");
