@@ -1,0 +1,6 @@
+---
+source: src/lib.rs
+expression: "layout.iter::<8>().collect::<TestBuffer>()"
+---
+column_one__column 2____________________                                        
+column 1    column 2
