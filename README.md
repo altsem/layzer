@@ -1,8 +1,10 @@
-# Layzer - A Lightweight Terminal Layout Library
+# layzer
+
+## Layzer - A Lightweight Terminal Layout Library
 
 **Work-in-progress, unfinished and broken, be warned**
 
-```
+```txt
 Layzer is a zero-heap-allocation layout library for
 building nested layouts with discrete positioning
 and sizing.
@@ -19,7 +21,8 @@ Auto-sizing based on content or   Arrange  children  horizontally
 fixed dimensions.                 children
                                   vertically
 ```
-## Quick start
+### Quick Start
+
 ```rust
 use layzer::{Layout, LayoutMeta, Axis};
 
@@ -44,6 +47,9 @@ for (position, text) in container.iter::<8>() {
 }
 ```
 
+### Layout Structure
 
-## Planned features:
-- Text-wrap of various kind
+Layouts form a tree structure where each node can contain data and/or children.
+The layout engine computes positions recursively, respecting the orientation
+and sizing constraints of each node.
+
