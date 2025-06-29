@@ -1,6 +1,6 @@
 # Layzer - A Lightweight Terminal Layout Library
 
-The API is a work-in-progress, so use at your own risk.
+**Work-in-progress, unfinished and broken, be warned**
 
 ```
 Layzer is a zero-heap-allocation layout library for
