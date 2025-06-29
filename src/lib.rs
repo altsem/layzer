@@ -20,20 +20,18 @@
 //! ## Quick Start
 //!
 //! ```rust
-//! use layzer::{Layout, Axis};
+//! use layzer::{Layout, LayoutMeta, Axis};
 //!
 //! // Create a text element
 //! let text_layout = Layout::text("Hello, World!");
 //!
 //! // Create a container with children
 //! let mut container = Layout {
-//!     orientation: Axis::Y,
-//!     gap: 1,
+//!     meta: LayoutMeta::default().vertical().gap(1),
 //!     children: &mut [
 //!         Layout::text("First line"),
 //!         Layout::text("Second line"),
 //!     ],
-//!     ..Default::default()
 //! };
 //!
 //! // Compute layout within 80x24 bounds
@@ -91,15 +89,60 @@ impl<T> std::ops::IndexMut<Axis> for Vec2<T> {
     }
 }
 
-#[derive(Debug, Default)]
-pub struct Layout<'a, T: Default> {
-    pub data: Option<T>,
-    pub orientation: Axis,
-    pub sizing: Vec2<Sizing>,
-    pub gap: usize,
-    pub _computed_position: Vec2<usize>,
-    pub _computed_size: Vec2<usize>,
+#[derive(Debug)]
+pub struct Layout<'a, T> {
+    pub meta: LayoutMeta<T>,
     pub children: &'a mut [Layout<'a, T>],
+}
+
+#[derive(Debug)]
+pub struct LayoutMeta<T> {
+    data: Option<T>,
+    orientation: Axis,
+    sizing: Vec2<Sizing>,
+    gap: usize,
+    _computed_position: Vec2<usize>,
+    _computed_size: Vec2<usize>,
+}
+
+impl<T> Default for LayoutMeta<T> {
+    fn default() -> Self {
+        Self {
+            data: None,
+            orientation: Axis::X,
+            sizing: Vec2::default(),
+            gap: 0,
+            _computed_position: Vec2::default(),
+            _computed_size: Vec2::default(),
+        }
+    }
+}
+
+impl<T> LayoutMeta<T> {
+    pub fn data(self, data: T) -> Self {
+        Self {
+            data: Some(data),
+            ..self
+        }
+    }
+
+    pub fn vertical(self) -> Self {
+        Self {
+            orientation: Axis::Y,
+            ..self
+        }
+    }
+
+    pub fn sizing(self, x_sizing: Sizing, y_sizing: Sizing) -> Self {
+        Self {
+            sizing: Vec2(x_sizing, y_sizing),
+            ..self
+        }
+    }
+
+    pub fn gap(self, gap: usize) -> Self {
+        Self { gap, ..self }
+    }
 }
 
 #[derive(Debug, Default, Copy, Clone)]
@@ -109,11 +152,11 @@ pub enum Sizing {
     Fixed(usize),
 }
 
-pub struct LayoutIterator<'a, T: Default, const STACK_SIZE: usize> {
+pub struct LayoutIterator<'a, T, const STACK_SIZE: usize> {
     stack_buffer: ArrayVec<&'a Layout<'a, T>, STACK_SIZE>,
 }
 
-impl<'a, T: Default, const STACK: usize> Iterator for LayoutIterator<'a, T, STACK> {
+impl<'a, T, const STACK: usize> Iterator for LayoutIterator<'a, T, STACK> {
     type Item = &'a Layout<'a, T>;
 
     fn next(&mut self) -> Option<Self::Item> {
@@ -125,7 +168,7 @@ impl<'a, T: Default, const STACK: usize> Iterator for LayoutIterator<'a, T, STAC
     }
 }
 
-impl<'a, T: Default + AsRef<str>> Layout<'a, T> {
+impl<'a, T: AsRef<str>> Layout<'a, T> {
     /// # Arguments
     /// * `data` - The text data to be displayed
     ///
@@ -140,9 +183,10 @@ impl<'a, T: Default + AsRef<str>> Layout<'a, T> {
         let len = text.as_ref().graphemes(true).count();
 
         Self {
-            data: Some(text),
-            sizing: Vec2(Sizing::Fixed(len), Sizing::Fixed(1)),
-            ..Default::default()
+            meta: LayoutMeta::default()
+                .data(text)
+                .sizing(Sizing::Fixed(len), Sizing::Fixed(1)),
+            children: &mut [],
         }
     }
 
@@ -171,9 +215,12 @@ impl<'a, T: Default + AsRef<str>> Layout<'a, T> {
             stack_buffer: stack,
         }
         .filter_map(|layout| {
-            layout.data.as_ref().map(|data| {
+            layout.meta.data.as_ref().map(|data| {
                 (
-                    [layout._computed_position.0, layout._computed_position.1],
+                    [
+                        layout.meta._computed_position.0,
+                        layout.meta._computed_position.1,
+                    ],
                     data,
                 )
             })
@@ -181,7 +228,7 @@ impl<'a, T: Default + AsRef<str>> Layout<'a, T> {
     }
 
     fn compute_axis(&mut self, axis: Axis, max_size: usize) -> usize {
-        let computed_size = match self.sizing[axis] {
+        let computed_size = match self.meta.sizing[axis] {
             Sizing::Auto => self.compute_children(axis, max_size),
             Sizing::Fixed(fixed_size) => {
                 let size = fixed_size.min(max_size);
@@ -190,23 +237,23 @@ impl<'a, T: Default + AsRef<str>> Layout<'a, T> {
             }
         };
 
-        self._computed_size[axis] = computed_size;
+        self.meta._computed_size[axis] = computed_size;
         computed_size
     }
 
     fn compute_children(&mut self, axis: Axis, max_size: usize) -> usize {
-        if self.orientation == axis {
+        if self.meta.orientation == axis {
             self.children.iter_mut().fold(0, |acc, child| {
-                let acc = if acc > 0 { acc + self.gap } else { acc };
+                let acc = if acc > 0 { acc + self.meta.gap } else { acc };
 
-                child._computed_position[axis] = self._computed_position[axis] + acc;
+                child.meta._computed_position[axis] = self.meta._computed_position[axis] + acc;
                 acc + child.compute_axis(axis, max_size)
             })
         } else {
             self.children
                 .iter_mut()
                 .map(|child| {
-                    child._computed_position[axis] = self._computed_position[axis];
+                    child.meta._computed_position[axis] = self.meta._computed_position[axis];
                     child.compute_axis(axis, max_size)
                 })
                 .max()
@@ -260,30 +307,25 @@ mod tests {
     #[test]
     fn two_columns() {
         let mut layout = Layout {
-            data: Some("________________________________________"),
-            orientation: Axis::X,
-            gap: 2,
+            meta: LayoutMeta::default()
+                .data("________________________________________")
+                .gap(2),
             children: &mut [
                 Layout {
-                    orientation: Axis::Y,
+                    meta: LayoutMeta::default().vertical(),
                     children: &mut [
                         Layout {
-                            orientation: Axis::X,
-                            gap: 1,
+                            meta: LayoutMeta::default().gap(1),
                             children: &mut [Layout::text("column"), Layout::text("one")],
-                            ..Default::default()
                         },
                         Layout::text("column 1"),
                     ],
-                    ..Default::default()
                 },
                 Layout {
-                    orientation: Axis::Y,
+                    meta: LayoutMeta::default().vertical(),
                     children: &mut [Layout::text("column 2"), Layout::text("column 2")],
-                    ..Default::default()
                 },
             ],
-            ..Default::default()
         };
 
         // FIXME Restricting bounds: `layout.compute([1. 1])` - doesn't have the desired effect
@@ -294,12 +336,11 @@ mod tests {
     #[test]
     fn docs() {
         let mut layout = Layout {
-            orientation: Axis::Y,
-            gap: 1,
+            meta: LayoutMeta::default().vertical().gap(1),
             children: &mut [
                 Layout::text("Layzer - A Lightweight Terminal Layout Library"),
                 Layout {
-                    orientation: Axis::Y,
+                    meta: LayoutMeta::default().vertical(),
                     children: &mut [
                         Layout::text("Layzer is a zero-heap-allocation layout library for"),
                         Layout::text("building nested layouts with discrete positioning"),
@@ -308,76 +349,63 @@ mod tests {
                         Layout::text("and any scenario where you need to compute positions and"),
                         Layout::text("sizes of rectangular elements."),
                     ],
-                    ..Default::default()
                 },
                 Layout {
-                    orientation: Axis::X,
-                    gap: 2,
+                    meta: LayoutMeta::default().gap(2),
                     children: &mut [
                         Layout {
-                            orientation: Axis::Y,
+                            meta: LayoutMeta::default().vertical(),
                             children: &mut [
                                 Layout::text("- Zero heap allocations -"),
                                 Layout::text("All layout computation is done"),
                                 Layout::text("without dynamic memory allocation."),
                             ],
-                            ..Default::default()
                         },
                         Layout {
-                            orientation: Axis::Y,
+                            meta: LayoutMeta::default().vertical(),
                             children: &mut [
                                 Layout::text("- Hierarchical layouts -"),
                                 Layout::text("Support for nesting layouts"),
                                 Layout::text("and arranging children within them."),
                             ],
-                            ..Default::default()
                         },
                     ],
-                    ..Default::default()
                 },
                 Layout {
-                    orientation: Axis::X,
-                    gap: 2,
+                    meta: LayoutMeta::default().gap(2),
                     children: &mut [
                         Layout {
-                            orientation: Axis::Y,
+                            meta: LayoutMeta::default().vertical(),
                             children: &mut [
                                 Layout::text("- Flexible sizing -"),
                                 Layout::text("Auto-sizing based on content or "),
                                 Layout::text("fixed dimensions."),
                             ],
-                            ..Default::default()
                         },
                         Layout {
-                            orientation: Axis::Y,
+                            meta: LayoutMeta::default().vertical(),
                             children: &mut [
                                 Layout::text("- Axis-oriented layouts -"),
                                 Layout {
-                                    orientation: Axis::X,
-                                    gap: 2,
+                                    meta: LayoutMeta::default().gap(2),
                                     children: &mut [
                                         Layout::text("Arrange"),
                                         Layout::text("children"),
                                         Layout::text("horizontally"),
                                     ],
-                                    ..Default::default()
                                 },
                                 Layout {
-                                    orientation: Axis::Y,
+                                    meta: LayoutMeta::default().vertical(),
                                     children: &mut [
                                         Layout::text("children"),
                                         Layout::text("vertically"),
                                     ],
-                                    ..Default::default()
                                 },
                             ],
-                            ..Default::default()
                         },
                     ],
-                    ..Default::default()
                 },
             ],
-            ..Default::default()
         };
 
         layout.compute([100, 100]);
