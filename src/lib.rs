@@ -1,6 +1,8 @@
-//! ```txt
-//! Layzer - A Lightweight Terminal Layout Library
+//! # Layzer - A Lightweight Terminal Layout Library
 //!
+//! **Work-in-progress, unfinished and broken, be warned**
+//!
+//! ```txt
 //! Layzer is a zero-heap-allocation layout library for
 //! building nested layouts with discrete positioning
 //! and sizing.
