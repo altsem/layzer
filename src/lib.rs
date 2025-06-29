@@ -1,4 +1,4 @@
-//! # Layzer - A Lightweight Terminal Layout Library
+//! ## A Lightweight Terminal Layout Library
 //!
 //! **Work-in-progress, unfinished and broken, be warned**
 //!
