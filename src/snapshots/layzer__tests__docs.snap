@@ -4,12 +4,10 @@ expression: "layout.iter::<16>().collect::<TestBuffer>()"
 ---
 Layzer - A Lightweight Terminal Layout Library                                  
                                                                                 
-Layzer is a zero-heap-allocation layout library for                             
-building nested layouts with discrete positioning                               
-and sizing.                                                                     
-It's designed for terminal UIs, text-based interfaces,                          
-and any scenario where you need to compute positions and                        
-sizes of rectangular elements.                                                  
+Layzer is a zero-heap-allocation layout library for building nested layouts with
+ discrete positioning, and sizing. It's designed for terminal UIs, text-based   
+interfaces, and any scenario where you need to compute positions and sizes of   
+rectangular elements.                                                           
                                                                                 
 - Zero heap allocations -           - Hierarchical layouts -                    
 All layout computation is done      Support for nesting layouts                 

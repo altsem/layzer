@@ -1,0 +1,5 @@
+---
+source: src/lib.rs
+expression: "layout.iter::<8>().collect::<TestBuffer>()"
+---
+12
