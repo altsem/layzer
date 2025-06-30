@@ -103,8 +103,9 @@ pub struct LayoutMeta<T> {
     orientation: Axis,
     sizing: Vec2<Sizing>,
     gap: usize,
-    _computed_position: Vec2<usize>,
-    _computed_size: Vec2<usize>,
+    computed_position: Vec2<usize>,
+    computed_size: Vec2<usize>,
+    out_of_bounds: bool,
 }
 
 impl<T> Default for LayoutMeta<T> {
@@ -114,8 +115,9 @@ impl<T> Default for LayoutMeta<T> {
             orientation: Axis::X,
             sizing: Vec2::default(),
             gap: 0,
-            _computed_position: Vec2::default(),
-            _computed_size: Vec2::default(),
+            computed_position: Vec2::default(),
+            computed_size: Vec2::default(),
+            out_of_bounds: false,
         }
     }
 }
@@ -217,11 +219,15 @@ impl<'a, T: AsRef<str>> Layout<'a, T> {
             stack_buffer: stack,
         }
         .filter_map(|layout| {
+            if layout.meta.out_of_bounds {
+                return None;
+            }
+
             layout.meta.data.as_ref().map(|data| {
                 (
                     [
-                        layout.meta._computed_position.0,
-                        layout.meta._computed_position.1,
+                        layout.meta.computed_position.0,
+                        layout.meta.computed_position.1,
                     ],
                     data,
                 )
@@ -233,29 +239,37 @@ impl<'a, T: AsRef<str>> Layout<'a, T> {
         let computed_size = match self.meta.sizing[axis] {
             Sizing::Auto => self.compute_children(axis, max_size),
             Sizing::Fixed(fixed_size) => {
+                if fixed_size > max_size {
+                    self.meta.out_of_bounds = true;
+                }
                 let size = fixed_size.min(max_size);
                 self.compute_children(axis, size);
                 size
             }
         };
 
-        self.meta._computed_size[axis] = computed_size;
+        self.meta.computed_size[axis] = computed_size;
         computed_size
     }
 
     fn compute_children(&mut self, axis: Axis, max_size: usize) -> usize {
         if self.meta.orientation == axis {
-            self.children.iter_mut().fold(0, |acc, child| {
-                let acc = if acc > 0 { acc + self.meta.gap } else { acc };
+            self.children.iter_mut().fold(0, |local_position, child| {
+                let local_position = if local_position > 0 {
+                    local_position + self.meta.gap
+                } else {
+                    local_position
+                };
 
-                child.meta._computed_position[axis] = self.meta._computed_position[axis] + acc;
-                acc + child.compute_axis(axis, max_size)
+                let position = (self.meta.computed_position[axis] + local_position).min(max_size);
+                child.meta.computed_position[axis] = position;
+                local_position + child.compute_axis(axis, max_size - position)
             })
         } else {
             self.children
                 .iter_mut()
                 .map(|child| {
-                    child.meta._computed_position[axis] = self.meta._computed_position[axis];
+                    child.meta.computed_position[axis] = self.meta.computed_position[axis];
                     child.compute_axis(axis, max_size)
                 })
                 .max()
@@ -330,8 +344,29 @@ mod tests {
             ],
         };
 
-        // FIXME Restricting bounds: `layout.compute([1. 1])` - doesn't have the desired effect
-        layout.compute([40, 20]);
+        layout.compute([20, 2]);
+        insta::assert_snapshot!(layout.iter::<8>().collect::<TestBuffer>());
+    }
+
+    #[test]
+    fn ignore_out_of_bound_columns() {
+        let mut layout = Layout {
+            meta: LayoutMeta::default().gap(1),
+            children: &mut [Layout::text("1"), Layout::text("2")],
+        };
+
+        layout.compute([2, 1]);
+        insta::assert_snapshot!(layout.iter::<8>().collect::<TestBuffer>());
+    }
+
+    #[test]
+    fn ignore_out_of_bound_rows() {
+        let mut layout = Layout {
+            meta: LayoutMeta::default().vertical(),
+            children: &mut [Layout::text("1"), Layout::text("2")],
+        };
+
+        layout.compute([1, 1]);
         insta::assert_snapshot!(layout.iter::<8>().collect::<TestBuffer>());
     }
 
