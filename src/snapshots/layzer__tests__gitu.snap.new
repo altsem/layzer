@@ -1,0 +1,17 @@
+---
+source: src/lib.rs
+assertion_line: 546
+expression: "layout.iter::<16>().collect::<TestBuffer>()"
+---
+On branch main                                                                  
+Your branch is up to date with 'origin/main'.                                   
+                                                                                
+Untracked files                                                                 
+file.txt                                                                        
+                                                                                
+─  ─  ─  ─  ─  ─  ─  ─  ─  ─  ─  ─  ─  ─  ─                                     
+Help                  Submenu                                                   
+Y Show Refs           b Branch                                                  
+<tab> Toggle section  c Commit                                                  
+k/<up> Up             f Fetch                                                   
+j/<down> Down         h/? Help

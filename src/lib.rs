@@ -488,4 +488,62 @@ mod tests {
         layout.compute([80, 60]);
         insta::assert_snapshot!(layout.iter::<16>().collect::<TestBuffer>());
     }
+
+    #[test]
+    fn gitu() {
+        let mut layout = Layout {
+            meta: LayoutMeta::default().vertical(),
+            children: &mut [
+                // Editor
+                Layout {
+                    meta: LayoutMeta::default().vertical(),
+                    children: &mut [
+                        Layout::text("On branch main"),
+                        Layout::text("Your branch is up to date with 'origin/main'."),
+                        Layout::text(""),
+                        Layout::text("Untracked files"),
+                        Layout::text("file.txt"),
+                        Layout::text(""),
+                    ],
+                },
+                // TODO The top Editor likely needs to grow to fill the space up until the menu
+                // Menu
+                Layout {
+                    meta: LayoutMeta::default().vertical(),
+                    children: &mut [
+                        Layout::text("───────────────"),
+                        // Menu columns
+                        Layout {
+                            meta: LayoutMeta::default().gap(2),
+                            children: &mut [
+                                Layout {
+                                    meta: LayoutMeta::default().vertical(),
+                                    children: &mut [
+                                        Layout::text("Help"),
+                                        Layout::text("Y Show Refs"),
+                                        Layout::text("<tab> Toggle section"),
+                                        Layout::text("k/<up> Up"),
+                                        Layout::text("j/<down> Down"),
+                                    ],
+                                },
+                                Layout {
+                                    meta: LayoutMeta::default().vertical(),
+                                    children: &mut [
+                                        Layout::text("Submenu"),
+                                        Layout::text("b Branch"),
+                                        Layout::text("c Commit"),
+                                        Layout::text("f Fetch"),
+                                        Layout::text("h/? Help"),
+                                    ],
+                                },
+                            ],
+                        },
+                    ],
+                },
+            ],
+        };
+
+        layout.compute([80, 60]);
+        insta::assert_snapshot!(layout.iter::<16>().collect::<TestBuffer>());
+    }
 }
